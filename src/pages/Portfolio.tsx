@@ -1,0 +1,21 @@
+import React from 'react';
+import { ArrowDownRight, ArrowUpRight, Briefcase, Plus } from 'lucide-react';
+import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { EmptyState } from '../components/ui/EmptyState';
+import { useTheme } from '../contexts/ThemeContext';
+import { useFinance } from '../hooks/useFinance';
+import { formatCurrency } from '../utils/formatters';
+import { portfolioTotals } from '../utils/financeCalcs';
+
+export const Portfolio: React.FC = () => {
+  const { currency } = useTheme(); const { holdings } = useFinance(); const totals = portfolioTotals(holdings);
+  const isGain = totals.gainLoss >= 0;
+  const allocation = Array.from(holdings.reduce((map, holding) => map.set(holding.assetClass, (map.get(holding.assetClass) ?? 0) + holding.value), new Map<string, number>())).map(([name, value]) => ({ name, value, percentage: totals.marketValue ? value / totals.marketValue * 100 : 0 }));
+  return <div className="space-y-6"><div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"><div><h2 className="text-xl font-extrabold text-slate-800 dark:text-white">Investment Portfolio</h2><p className="text-xs text-slate-500 dark:text-slate-400">Track holdings, cost basis, and performance when you are ready.</p></div><Button size="sm" icon={<Plus className="w-4 h-4" />} disabled title="Manual holdings entry is planned for Phase D">Add Investment</Button></div>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6"><Card><span className="text-[10px] uppercase font-bold text-slate-500">Portfolio value</span><h3 className="text-3xl font-extrabold mt-1">{formatCurrency(totals.marketValue, currency)}</h3><p className="text-xs text-slate-400">Recorded holdings only</p></Card><Card><span className="text-[10px] uppercase font-bold text-slate-500">Cost basis</span><h3 className="text-3xl font-extrabold mt-1">{formatCurrency(totals.costBasis, currency)}</h3><p className="text-xs text-slate-400">Manual values until price integrations</p></Card><Card><span className="text-[10px] uppercase font-bold text-slate-500">Gain / loss</span><h3 className={`text-3xl font-extrabold mt-1 ${isGain ? 'text-emerald-500' : 'text-rose-500'}`}>{isGain ? '+' : ''}{formatCurrency(totals.gainLoss, currency)}</h3><p className="text-xs text-slate-400 flex items-center gap-1">{isGain ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}{totals.gainLossPercent.toFixed(2)}% lifetime return</p></Card></div>
+    <Card title="Asset Allocation" subtitle="Allocation is calculated from your recorded holdings">{allocation.length === 0 ? <EmptyState icon={<Briefcase className="w-5 h-5" />} title="No investments yet" description="Add a manual holding to see allocation and portfolio analytics. Live market prices are not connected." /> : <div className="space-y-3">{allocation.map((item) => <div key={item.name}><div className="flex justify-between text-xs"><span>{item.name}</span><span>{item.percentage.toFixed(1)}%</span></div><div className="mt-1 h-2 rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${item.percentage}%` }} /></div></div>)}</div>}</Card>
+    <Card className="overflow-hidden p-0" title="Holdings Ledger"><div className="overflow-x-auto"><table className="w-full text-left"><thead><tr className="text-xs text-slate-400 uppercase border-b"><th className="px-6 py-4">Symbol</th><th>Name</th><th>Class</th><th className="text-right">Value</th><th className="px-6 text-right">Gain/Loss</th></tr></thead><tbody>{holdings.length === 0 ? <tr><td colSpan={5}><EmptyState icon={<Plus className="w-5 h-5" />} title="No holdings yet" description="A new portfolio begins with no investments." /></td></tr> : holdings.map((holding) => <tr key={holding.symbol} className="border-b text-sm"><td className="px-6 py-4 font-bold">{holding.symbol}</td><td>{holding.name}</td><td><Badge variant="slate">{holding.assetClass}</Badge></td><td className="text-right">{formatCurrency(holding.value, currency)}</td><td className={`px-6 text-right font-bold ${holding.gainLoss >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>{holding.gainLossPercentage.toFixed(2)}%</td></tr>)}</tbody></table></div></Card>
+  </div>;
+};
